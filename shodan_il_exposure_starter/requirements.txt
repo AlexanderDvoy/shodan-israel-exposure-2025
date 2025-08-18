@@ -1,0 +1,4 @@
+shodan
+pandas
+matplotlib
+python-dotenv
