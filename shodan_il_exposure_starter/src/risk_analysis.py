@@ -1,35 +1,51 @@
 # src/risk_analysis.py
-"""
-Risk Analysis for Shodan Data
------------------------------
-  Adding risk columns  (Risk Level) CVE data Shodan.
-"""
-
-import pandas as pd
+import argparse
 from pathlib import Path
+import pandas as pd
 from src.risk_mapping import risk_mapping
 
-INPUT_FILE = Path("reports/israel_shodan_2025.csv")   
-OUTPUT_FILE = Path("reports/risk_data.csv")
+# מצביע על שורש הפרויקט (תיקייה אחת מעל src/)
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+REPORTS_DIR = PROJECT_ROOT / "reports"
 
-def run_risk_analysis():
-    if not INPUT_FILE.exists():
-        raise FileNotFoundError(f"❌ לא נמצא קובץ קלט: {INPUT_FILE}")
+def autodetect_input():
+    csvs = sorted(REPORTS_DIR.glob("*.csv"), key=lambda p: p.stat().st_mtime, reverse=True)
+    return csvs[0] if csvs else None
 
-    df = pd.read_csv(INPUT_FILE)
+def run(input_path: Path, output_path: Path):
+    print(f"[i] Using input:  {input_path.resolve()}")
+    print(f"[i] Writing to:  {output_path.resolve()}")
 
+    if not input_path.exists():
+        raise FileNotFoundError(f"❌ לא נמצא קובץ קלט: {input_path}")
+    df = pd.read_csv(input_path)
     if "port" not in df.columns:
-        raise ValueError("❌ There is no columns   'port' ")
+        raise ValueError("❌ חסרה עמודת 'port' בנתונים")
 
     df["protocol"] = df["port"].map(lambda p: risk_mapping.get(p, {}).get("protocol", "Unknown"))
-    df["risk"] = df["port"].map(lambda p: risk_mapping.get(p, {}).get("risk", "Unknown"))
-    df["cves"] = df["port"].map(lambda p: ",".join(risk_mapping.get(p, {}).get("cves", [])))
+    df["risk"]     = df["port"].map(lambda p: risk_mapping.get(p, {}).get("risk", "Unknown"))
+    df["cves"]     = df["port"].map(lambda p: ",".join(risk_mapping.get(p, {}).get("cves", [])))
 
-    OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
-    df.to_csv(OUTPUT_FILE, index=False, encoding="utf-8")
-
-    print(f"✅ Operation finished  !   Saved at: {OUTPUT_FILE}")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(output_path, index=False, encoding="utf-8")
+    print(f"✅ ניתוח סיכונים הושלם! נשמר: {output_path.resolve()}")
 
 if __name__ == "__main__":
-    run_risk_analysis()
+    parser = argparse.ArgumentParser(description="Risk analysis for Shodan CSV")
+    parser.add_argument("-i", "--input", type=Path, default=None, help="נתיב לקובץ CSV גולמי")
+    parser.add_argument("-o", "--output", type=Path, default=REPORTS_DIR / "risk_data.csv",
+                        help="נתיב פלט (ברירת מחדל: reports/risk_data.csv)")
+    args = parser.parse_args()
+
+    inp = args.input or autodetect_input()
+    if inp is None:
+        raise FileNotFoundError("❌ לא נמצא אף CSV בתיקיית reports/. צור אחד עם collect_shodan.py או ציין --input.")
+    # אם המשתמש נתן נתיב יחסי – נפתור ביחס לשורש הפרויקט
+    if not inp.is_absolute():
+        inp = (PROJECT_ROOT / inp).resolve()
+    out = args.output
+    if not out.is_absolute():
+        out = (PROJECT_ROOT / out).resolve()
+
+    run(inp, out)
 
