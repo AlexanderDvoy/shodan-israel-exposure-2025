@@ -1,24 +1,46 @@
 # src/risk_analysis.py
-import argparse
+import argparse, json
 from pathlib import Path
 import pandas as pd
 from src.risk_mapping import risk_mapping
 
-# מצביע על שורש הפרויקט (תיקייה אחת מעל src/)
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 REPORTS_DIR = PROJECT_ROOT / "reports"
+DEFAULT_CSV = REPORTS_DIR / "shodan_raw_data.csv"
+DEFAULT_JSON = PROJECT_ROOT / "data" / "raw" / "shodan_data.json"
 
-def autodetect_input():
-    csvs = sorted(REPORTS_DIR.glob("*.csv"), key=lambda p: p.stat().st_mtime, reverse=True)
-    return csvs[0] if csvs else None
+def load_input(input_path: Path) -> pd.DataFrame:
+    if not input_path.exists():
+        raise FileNotFoundError(f"❌ לא נמצא קובץ קלט: {input_path}")
+
+    if input_path.suffix.lower() == ".csv":
+        df = pd.read_csv(input_path)
+    elif input_path.suffix.lower() == ".json":
+        with input_path.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+        matches = data.get("matches", data)
+        rows = []
+        for m in matches:
+            rows.append({
+                "ip": m.get("ip_str"),
+                "port": m.get("port"),
+                "transport": m.get("transport"),
+                "country": (m.get("location") or {}).get("country_code"),
+                "org": m.get("org"),
+                "asn": m.get("asn"),
+                "product": m.get("product"),
+                "timestamp": m.get("timestamp"),
+            })
+        df = pd.DataFrame(rows)
+    else:
+        raise ValueError("תמיכת קלט: .csv או .json בלבד")
+    return df
 
 def run(input_path: Path, output_path: Path):
     print(f"[i] Using input:  {input_path.resolve()}")
     print(f"[i] Writing to:  {output_path.resolve()}")
 
-    if not input_path.exists():
-        raise FileNotFoundError(f"❌ לא נמצא קובץ קלט: {input_path}")
-    df = pd.read_csv(input_path)
+    df = load_input(input_path)
     if "port" not in df.columns:
         raise ValueError("❌ חסרה עמודת 'port' בנתונים")
 
@@ -31,21 +53,19 @@ def run(input_path: Path, output_path: Path):
     print(f"✅ ניתוח סיכונים הושלם! נשמר: {output_path.resolve()}")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Risk analysis for Shodan CSV")
-    parser.add_argument("-i", "--input", type=Path, default=None, help="נתיב לקובץ CSV גולמי")
-    parser.add_argument("-o", "--output", type=Path, default=REPORTS_DIR / "risk_data.csv",
-                        help="נתיב פלט (ברירת מחדל: reports/risk_data.csv)")
-    args = parser.parse_args()
+    p = argparse.ArgumentParser(description="Risk analysis for Shodan CSV/JSON")
+    p.add_argument("-i", "--input", type=Path, default=None,
+                   help="קלט: CSV או JSON (ברירת מחדל: reports/shodan_raw_data.csv או data/raw/shodan_data.json)")
+    p.add_argument("-o", "--output", type=Path, default=REPORTS_DIR / "risk_data.csv",
+                   help="פלט CSV (ברירת מחדל: reports/risk_data.csv)")
+    args = p.parse_args()
 
-    inp = args.input or autodetect_input()
+    inp = args.input
     if inp is None:
-        raise FileNotFoundError("❌ לא נמצא אף CSV בתיקיית reports/. צור אחד עם collect_shodan.py או ציין --input.")
-    # אם המשתמש נתן נתיב יחסי – נפתור ביחס לשורש הפרויקט
+        # אם אין CSV – ננסה את JSON
+        inp = DEFAULT_CSV if DEFAULT_CSV.exists() else DEFAULT_JSON
     if not inp.is_absolute():
         inp = (PROJECT_ROOT / inp).resolve()
-    out = args.output
-    if not out.is_absolute():
-        out = (PROJECT_ROOT / out).resolve()
-
+    out = args.output if args.output.is_absolute() else (PROJECT_ROOT / args.output).resolve()
     run(inp, out)
 
