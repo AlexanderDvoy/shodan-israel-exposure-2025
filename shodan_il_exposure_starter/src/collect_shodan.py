@@ -83,7 +83,7 @@ def search_matches(api, query: str, max_matches: int, page_delay: float = 1.2):
 
 def main():
     load_dotenv()
-    api_key = os.getenv("SHODAN_API_KEY")
+    api_key = os.getenv("fSTWMFt87U4xcaqLMDv1LpvtRYGZrrt2")
     if not api_key:
         raise SystemExit("Missing SHODAN_API_KEY. Put it in .env or environment.")
     api = shodan.Shodan(api_key)
