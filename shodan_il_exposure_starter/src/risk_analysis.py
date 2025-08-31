@@ -15,10 +15,23 @@ def load_input(input_path: Path) -> pd.DataFrame:
 
     if input_path.suffix.lower() == ".csv":
         df = pd.read_csv(input_path)
-    elif input_path.suffix.lower() == ".json":
+        return df
+
+    if input_path.suffix.lower() == ".json":
         with input_path.open("r", encoding="utf-8") as f:
             data = json.load(f)
-        matches = data.get("matches", data)
+
+        # תומך בכל הצורות:
+        # 1) {"matches": [ ... ]}
+        # 2) [ ... ]  (רשימה ישירה)
+        # 3) {"data": [ ... ]}  (ליתר ביטחון)
+        if isinstance(data, list):
+            matches = data
+        elif isinstance(data, dict):
+            matches = data.get("matches") or data.get("data") or []
+        else:
+            raise ValueError("מבנה JSON לא נתמך")
+
         rows = []
         for m in matches:
             rows.append({
@@ -31,9 +44,12 @@ def load_input(input_path: Path) -> pd.DataFrame:
                 "product": m.get("product"),
                 "timestamp": m.get("timestamp"),
             })
+
         df = pd.DataFrame(rows)
-    else:
-        raise ValueError("תמיכת קלט: .csv או .json בלבד")
+        return df
+
+    raise ValueError("תמיכת קלט: .csv או .json בלבד")
+
     return df
 
 def run(input_path: Path, output_path: Path):
@@ -68,4 +84,5 @@ if __name__ == "__main__":
         inp = (PROJECT_ROOT / inp).resolve()
     out = args.output if args.output.is_absolute() else (PROJECT_ROOT / args.output).resolve()
     run(inp, out)
+
 
