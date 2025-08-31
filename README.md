@@ -1,82 +1,100 @@
-Shodan IL Exposure Starter
+Shodan Exposure Risk Analysis
 
-A simple Python project that queries the Shodan API for exposed services in Israel and stores the results for analysis.
-This is intended for educational and cybersecurity research purposes only.
+A Python-based project for collecting, analyzing, and visualizing Shodan data to understand cyber exposure at the country and organization level.
 
-Features
+🚀 Features
 
-Fetches data from Shodan using multiple queries:
+Automated Shodan Collection
+Collect exposed services by country, organization (org), or ASN.
 
-RDP (3389)
+Risk Analysis
+Maps open ports to:
 
-FTP (21)
+Protocols
 
-SSH (22)
+Risk level (Low → Critical)
 
-SMB (445)
+Relevant CVEs
 
-HTTP “Index of” pages
+Multi-Country / Organization Comparison
+Run the pipeline for several countries/organizations and compare exposures.
 
-RTSP (IP cameras)
+Visualization
+Clear bar charts of exposed protocols by country.
 
-Elasticsearch (9200)
+Flexible Input Formats
+Supports both CSV and JSON/NDJSON Shodan outputs.
 
-MongoDB (27017)
+🛠️ Project Structure
+shodan_il_exposure/
+│── reports/                # Output files (CSV, graphs, reports)
+│   └── figures/
+│── data/
+│   └── raw/                # Raw JSON data from Shodan
+│── src/
+│   ├── collect_shodan.py   # Collects Shodan results
+│   ├── risk_analysis.py    # Risk mapping & CVE enrichment
+│   ├── risk_mapping.py     # Port → Protocol → Risk → CVEs mapping
+│   ├── compare_graphs.py   # Generates comparative charts
+│   └── main.py             # Pipeline (collect → analyze → visualize)
+│── requirements.txt
+│── README.md
 
-Redis (6379)
-
-Saves results into data/raw/ as JSON files.
-
-Easy to extend with new queries.
-
-Structured for later data analysis (analyze_data.py).
-
- Quickstart
- 
-1. Clone the repo
-git clone https://github.com/YOUR-USERNAME/shodan_il_exposure_starter.git
-cd shodan_il_exposure_starter
-
-2. Setup virtual environment
-python -m venv .venv
-source .venv/bin/activate   # On Linux/Mac
-.venv\Scripts\activate      # On Windows
-
-3. Install dependencies
+⚡ Installation
+git clone https://github.com/<your_username>/shodan_il_exposure.git
+cd shodan_il_exposure
+python -m venv venv
+source venv/bin/activate   # (Linux/Mac)
+.\venv\Scripts\Activate.ps1 # (Windows PowerShell)
 pip install -r requirements.txt
 
-4. Set your Shodan API key
+🔑 Shodan API Key
 
-Create a .env file in the project root:
+Export your Shodan API key before running:
 
-SHODAN_API_KEY=your_api_key_here
+export SHODAN_API_KEY="your_api_key_here"   # Linux/Mac
+$env:SHODAN_API_KEY="your_api_key_here"     # Windows PowerShell
 
-5. Run the data fetcher
-python src/fetch_data.py
+▶️ Usage
+Collect data (Israel)
+python -m src.collect_shodan -c IL -l 200
+
+Collect data (Organization in Netherlands)
+python -m src.collect_shodan -c NL -q 'org:"Brinks Inc"' -l 200
+
+Risk Analysis
+python -m src.risk_analysis -i reports/shodan_raw_data.csv -o reports/risk_data.csv
+
+Visualization
+python -m src.compare_graphs -i reports/risk_data.csv
 
 
-Results will be saved in data/raw/.
+Outputs:
 
-6. (Optional) Run analysis
-python src/analyze_data.py
+reports/risk_data.csv → enriched with protocol, risk, CVEs
 
-📂 Project Structure
-shodan_il_exposure_starter/
-│
-├── src/
-│   ├── fetch_data.py       # Fetch data from Shodan
-│   ├── analyze_data.py     # Analyze collected data
-│
-├── data/
-│   └── raw/                # Raw JSON outputs
-│
-├── .env.example            # Example environment variables
-├── requirements.txt        # Python dependencies
-└── README.md               # Project documentation
+reports/figures/comparison_by_country.png
+
+Full Pipeline
+python -m src.main
+
+📊 Example Output
+IP	Port	Protocol	Country	Org	Risk	CVEs
+208.56.32.192	25	SMTP	IL	Meta Networks Inc	Medium	CVE-2020-8616
+91.199.111.10	3389	RDP	US	Example ISP	Critical	CVE-2019-0708
+
+Graph output:
+
+
+📌 Use Cases
+
+Threat Intelligence teams: country-level exposure mapping.
+
+Penetration Testers: OSINT reconnaissance prior to engagements.
+
+Researchers: compare exposure trends across different regions.
 
 ⚠️ Disclaimer
 
-This project is for educational purposes only.
-Do not use it for unauthorized scanning or attacks.
-Always respect local laws and the Shodan terms of service.
-<img width="930" height="374" alt="321" src="https://github.com/user-attachments/assets/848c07f9-1717-4d6f-ad40-f1cd328a3779" />
+This project is for educational and research purposes only.
+Do not use it to exploit systems. Always ensure you have permission before scanning or analyzing an organization.
