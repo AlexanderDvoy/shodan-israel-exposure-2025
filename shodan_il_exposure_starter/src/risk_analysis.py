@@ -9,7 +9,7 @@ import pandas as pd
 from pathlib import Path
 from src.risk_mapping import risk_mapping
 
-INPUT_FILE = Path("reports/shodan_raw_data.csv")   
+INPUT_FILE = Path("reports/israel_shodan_2025.csv")   
 OUTPUT_FILE = Path("reports/risk_data.csv")
 
 def run_risk_analysis():
@@ -32,3 +32,4 @@ def run_risk_analysis():
 
 if __name__ == "__main__":
     run_risk_analysis()
+
